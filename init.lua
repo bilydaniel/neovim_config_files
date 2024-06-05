@@ -912,39 +912,11 @@ require("lazy").setup({
 			--    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
 		end,
 	},
-	--	{
-	--		"olexsmir/gopher.nvim",
-	--		ft = "go",
-	--	config = function(_, opts)
-	--	require("gopher").setup(opts)
-	--	end,
-	--	build = function()
-	--		vim.cmd([[silent! GoInstallDeps]])
-	--	end,
-	--},
-	-- Gopher.nvim
 	{
-		"olexsmir/gopher.nvim",
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-			"nvim-tree/nvim-web-devicons",
-			"nvim-treesitter/nvim-treesitter",
-			"leoluz/nvim-dap-go",
-			"williamboman/mason.nvim",
-			"williamboman/mason-lspconfig.nvim",
-			"koron/iferr",
-		},
-		config = function()
-			require("gopher").setup({
-				commands = {
-					go = "go",
-					gomodifytags = "gomodifytags",
-					gotests = "gotests",
-					impl = "impl",
-					iferr = "iferr",
-				},
-			})
-		end,
+		"fatih/vim-go",
+		--		config = function()
+		--      vim.cmd.GoUpdateBinaries()
+		--    end,
 	},
 	-- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
 	-- init.lua. If you want these files, they are in the repository, so you can just download them and
