@@ -914,6 +914,7 @@ require("lazy").setup({
 	},
 	{
 		"fatih/vim-go",
+		["go_doc_keywordprg_enabled"] = false,
 		--		config = function()
 		--      vim.cmd.GoUpdateBinaries()
 		--    end,
