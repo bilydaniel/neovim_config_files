@@ -87,6 +87,9 @@ P.S. You can delete this when you're done too. It's your config now! :)
 -- Set <space> as the leader key
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
+--
+--
+
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 vim.keymap.set("n", "<leader>pv", vim.cmd.Ex)
@@ -178,6 +181,13 @@ vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, { desc = "Go to previous [D]
 vim.keymap.set("n", "]d", vim.diagnostic.goto_next, { desc = "Go to next [D]iagnostic message" })
 vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float, { desc = "Show diagnostic [E]rror messages" })
 vim.keymap.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Open diagnostic [Q]uickfix list" })
+vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
+
+-- REMAP ctrl c to esc
+vim.keymap.set("i", "<C-c>", "<Esc>")
+vim.keymap.set("c", "<C-c>", "<Esc>")
+vim.keymap.set("t", "<C-c>", "<Esc>")
+vim.keymap.set("v", "<C-c>", "<Esc>")
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -301,6 +311,8 @@ require("lazy").setup({
 
 	{ -- Useful plugin to show you pending keybinds.
 		"folke/which-key.nvim",
+		version = "1.6.1",
+		--tag = "stable",
 		event = "VimEnter", -- Sets the loading event to 'VimEnter'
 		config = function() -- This is the function that runs, AFTER loading
 			require("which-key").setup()
@@ -332,7 +344,7 @@ require("lazy").setup({
 	{ -- Fuzzy Finder (files, lsp, etc)
 		"nvim-telescope/telescope.nvim",
 		event = "VimEnter",
-		branch = "0.1.x",
+		branch = "master",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
 			{ -- If encountering errors, see telescope-fzf-native README for installation instructions
@@ -607,15 +619,56 @@ require("lazy").setup({
 				--
 				-- But for many setups, the LSP (`tsserver`) will work just fine
 				-- tsserver = {},
+				--				volar = {
+				--					filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue", "json" },
+				--					init_options = {
+				--						vue = {
+				--							hybridMode = false,
+				--						},
+				--						typescript = {
+				--							--tsdk = vim.fn.stdpath("data")
+				--							--	.. "/mason/packages/typescript-language-server/node_modules/typescript/lib",
+				--							tsdk = vim.fn.getcwd() .. "/node_modules/typescript/lib",
+				--						},
+				--						languageFeatures = {
+				--							implementation = true, -- Enable "Go to Implementation"
+				--							references = true,
+				--							definition = true,
+				--							typeDefinition = true,
+				--							rename = true,
+				--							documentHighlight = true,
+				--							codeAction = true,
+				--							workspaceSymbol = true,
+				--							completion = {
+				--								defaultTagNameCase = "both",
+				--								defaultAttrNameCase = "kebabCase",
+				--								getDocumentNameCasesRequest = false,
+				--								getDocumentSelectionRequest = false,
+				--							},
+				--						},
+				--					},
+				--				},
 				--
 
-				gopls = {
+				--				gopls = {
+				--					settings = {
+				--						gopls = {
+				--							completeUnimported = true,
+				--							usePlaceholders = true,
+				--							analyses = {
+				--								unusedparams = true,
+				--							},
+				--						},
+				--					},
+				--				},
+
+				zls = {
+					version = "0.13",
 					settings = {
-						gopls = {
-							completeUnimported = true,
-							usePlaceholders = true,
-							analyses = {
-								unusedparams = true,
+						zls = {
+							enableDocumentation = true,
+							completion = {
+								documentation = true,
 							},
 						},
 					},
@@ -651,21 +704,20 @@ require("lazy").setup({
 			vim.list_extend(ensure_installed, {
 				"stylua", -- Used to format Lua code
 				"gopls",
+				--"volar",
 			})
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
 			require("mason-lspconfig").setup({
-				handlers = {
-					function(server_name)
-						local server = servers[server_name] or {}
-						-- This handles overriding only values explicitly passed
-						-- by the server configuration above. Useful when disabling
-						-- certain features of an LSP (for example, turning off formatting for tsserver)
-						server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
-						require("lspconfig")[server_name].setup(server)
-					end,
-				},
+				automatic_installation = false,
 			})
+
+			-- Manually setup servers:
+			for server_name, server_config in pairs(servers) do
+				server_config.capabilities =
+					vim.tbl_deep_extend("force", {}, capabilities, server_config.capabilities or {})
+				require("lspconfig")[server_name].setup(server_config)
+			end
 		end,
 	},
 
@@ -688,7 +740,7 @@ require("lazy").setup({
 				-- Disable "format_on_save lsp_fallback" for languages that don't
 				-- have a well standardized coding style. You can add additional
 				-- languages here or re-enable it for the disabled ones.
-				local disable_filetypes = { c = true, cpp = true }
+				local disable_filetypes = { c = true, cpp = true, vue = true }
 				return {
 					timeout_ms = 500,
 					lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
@@ -822,17 +874,17 @@ require("lazy").setup({
 		-- change the command in the config to whatever the name of that colorscheme is.
 		--
 		-- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-		"folke/tokyonight.nvim",
-		priority = 1000, -- Make sure to load this before all the other start plugins.
-		init = function()
-			-- Load the colorscheme here.
-			-- Like many other themes, this one has different styles, and you could load
-			-- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-			vim.cmd.colorscheme("tokyonight-night")
+		--"folke/tokyonight.nvim",
+		--priority = 1000, -- Make sure to load this before all the other start plugins.
+		--init = function()
+		-- Load the colorscheme here.
+		-- Like many other themes, this one has different styles, and you could load
+		-- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+		--	vim.cmd.colorscheme("tokyonight-night")
 
-			-- You can configure highlights by doing something like:
-			vim.cmd.hi("Comment gui=none")
-		end,
+		-- You can configure highlights by doing something like:
+		--	vim.cmd.hi("Comment gui=none")
+		--end,
 	},
 
 	-- Highlight todo, notes, etc in comments
@@ -884,7 +936,22 @@ require("lazy").setup({
 		"nvim-treesitter/nvim-treesitter",
 		build = ":TSUpdate",
 		opts = {
-			ensure_installed = { "bash", "c", "diff", "html", "lua", "luadoc", "markdown", "vim", "vimdoc" },
+			ensure_installed = {
+				"bash",
+				"c",
+				"diff",
+				"html",
+				"lua",
+				"luadoc",
+				"markdown",
+				"vim",
+				"vimdoc",
+				"vue",
+				"typescript",
+				"javascript",
+				"zig",
+				"go",
+			},
 			-- Autoinstall languages that are not installed
 			auto_install = true,
 			highlight = {
@@ -919,6 +986,102 @@ require("lazy").setup({
 		--      vim.cmd.GoUpdateBinaries()
 		--    end,
 	},
+	{
+		"neoclide/coc.nvim",
+		branch = "release",
+	},
+	{
+		"posva/vim-vue",
+	},
+	{
+		"rose-pine/neovim",
+		name = "rose-pine",
+		init = function()
+			vim.cmd.colorscheme("rose-pine")
+			-- vim.cmd("colorscheme rose-pine-main")
+			--vim.cmd("colorscheme rose-pine-moon")
+			-- vim.cmd("colorscheme rose-pine-dawn")
+			-- You can configure highlights by doing something like:
+			--	vim.cmd.hi("Comment gui=none")
+		end,
+		config = function()
+			require("rose-pine").setup({
+				variant = "main", -- auto, main, moon, or dawn
+				dark_variant = "main", -- main, moon, or dawn
+				dim_inactive_windows = false,
+				extend_background_behind_borders = true,
+
+				enable = {
+					terminal = true,
+					legacy_highlights = true, -- Improve compatibility for previous versions of Neovim
+					migrations = true, -- Handle deprecated options automatically
+				},
+
+				styles = {
+					bold = true,
+					italic = true,
+					transparency = false,
+				},
+
+				groups = {
+					border = "muted",
+					link = "iris",
+					panel = "surface",
+
+					error = "love",
+					hint = "iris",
+					info = "foam",
+					note = "pine",
+					todo = "rose",
+					warn = "gold",
+
+					git_add = "foam",
+					git_change = "rose",
+					git_delete = "love",
+					git_dirty = "rose",
+					git_ignore = "muted",
+					git_merge = "iris",
+					git_rename = "pine",
+					git_stage = "iris",
+					git_text = "rose",
+					git_untracked = "subtle",
+
+					h1 = "iris",
+					h2 = "foam",
+					h3 = "rose",
+					h4 = "gold",
+					h5 = "pine",
+					h6 = "foam",
+				},
+
+				palette = {
+					-- Override the builtin palette per variant
+					-- moon = {
+					--     base = '#18191a',
+					--     overlay = '#363738',
+					-- },
+				},
+
+				highlight_groups = {
+					-- Comment = { fg = "foam" },
+					-- VertSplit = { fg = "muted", bg = "muted" },
+				},
+
+				before_highlight = function(group, highlight, palette)
+					-- Disable all undercurls
+					-- if highlight.undercurl then
+					--     highlight.undercurl = false
+					-- end
+					--
+					-- Change palette colour
+					-- if highlight.fg == palette.pine then
+					--     highlight.fg = palette.foam
+					-- end
+				end,
+			})
+		end,
+	},
+
 	-- The following two comments only work if you have downloaded the kickstart repo, not just copy pasted the
 	-- init.lua. If you want these files, they are in the repository, so you can just download them and
 	-- place them in the correct locations.
