@@ -219,6 +219,12 @@ vim.keymap.set("n", "<leader>me", vim.cmd.GoIfErr, { desc = "[m]ake if [e]rr blo
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
 
+vim.filetype.add({
+	extension = {
+		fs = "glsl",
+	},
+})
+
 -- Highlight when yanking (copying) text
 --  Try it with `yap` in normal mode
 --  See `:help vim.highlight.on_yank()`
@@ -227,6 +233,12 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	group = vim.api.nvim_create_augroup("kickstart-highlight-yank", { clear = true }),
 	callback = function()
 		vim.highlight.on_yank()
+	end,
+})
+vim.api.nvim_create_autocmd("BufWritePre", {
+	pattern = "*.go",
+	callback = function()
+		vim.lsp.buf.format({ async = false }) -- gopls runs goimports here
 	end,
 })
 
@@ -269,7 +281,7 @@ require("lazy").setup({
 	-- {'williamboman/mason.nvim'},
 	-- {'williamboman/mason-lspconfig.nvim'},
 
-	{ "VonHeikemen/lsp-zero.nvim", branch = "v3.x" },
+	--{ "VonHeikemen/lsp-zero.nvim", branch = "v3.x" },
 	{ "neovim/nvim-lspconfig" },
 	{ "hrsh7th/cmp-nvim-lsp" },
 	{ "hrsh7th/nvim-cmp" },
@@ -650,20 +662,34 @@ require("lazy").setup({
 				--				},
 				--
 
-				--				gopls = {
-				--					settings = {
-				--						gopls = {
-				--							completeUnimported = true,
-				--							usePlaceholders = true,
-				--							analyses = {
-				--								unusedparams = true,
-				--							},
-				--						},
-				--					},
-				--				},
+				gopls = {
+					settings = {
+						gopls = {
+							completeUnimported = true,
+							usePlaceholders = true,
+							analyses = {
+								unusedparams = true,
+							},
+							staticcheck = true,
+						},
+					},
+					-- automatically adds / removes imports
+					on_attach = function(client, bufnr)
+						if client.server_capabilities.codeActionProvider then
+							vim.api.nvim_create_autocmd("BufWritePre", {
+								buffer = bufnr,
+								callback = function()
+									vim.lsp.buf.code_action({
+										context = { only = { "source.organizeImports" } },
+										apply = true,
+									})
+								end,
+							})
+						end
+					end,
+				},
 
 				zls = {
-					version = "0.13",
 					settings = {
 						zls = {
 							enableDocumentation = true,
@@ -673,6 +699,8 @@ require("lazy").setup({
 						},
 					},
 				},
+
+				glsl_analyzer = {},
 
 				lua_ls = {
 					-- cmd = {...},
@@ -708,16 +736,32 @@ require("lazy").setup({
 			})
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
-			require("mason-lspconfig").setup({
-				automatic_installation = false,
-			})
+			--TODO: commented out because of two definitions
+			--require("mason-lspconfig").setup({
+			--automatic_installation = false,
+			--handlers = {}, -- disables automatic setup for all servers
+			--})
 
-			-- Manually setup servers:
+			local lspconfig = require("lspconfig")
 			for server_name, server_config in pairs(servers) do
 				server_config.capabilities =
 					vim.tbl_deep_extend("force", {}, capabilities, server_config.capabilities or {})
-				require("lspconfig")[server_name].setup(server_config)
+				lspconfig[server_name].setup(server_config)
 			end
+
+			-- Volar in Take Over Mode - handles Vue, TS, and JS
+			lspconfig.volar.setup({
+				filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue" },
+				init_options = {
+					vue = {
+						hybridMode = false, -- This enables take over mode
+					},
+				},
+			})
+
+			-- Only HTML and CSS servers
+			lspconfig.html.setup({})
+			lspconfig.cssls.setup({})
 		end,
 	},
 
@@ -949,6 +993,7 @@ require("lazy").setup({
 				"vue",
 				"typescript",
 				"javascript",
+				"vue",
 				"zig",
 				"go",
 			},
@@ -980,16 +1025,16 @@ require("lazy").setup({
 		end,
 	},
 	{
-		"fatih/vim-go",
-		["go_doc_keywordprg_enabled"] = false,
+		--"fatih/vim-go",
+		--["go_doc_keywordprg_enabled"] = false,
 		--		config = function()
 		--      vim.cmd.GoUpdateBinaries()
 		--    end,
 	},
-	{
-		"neoclide/coc.nvim",
-		branch = "release",
-	},
+	--	{
+	--		"neoclide/coc.nvim",
+	--		branch = "release",
+	--	},
 	{
 		"posva/vim-vue",
 	},
